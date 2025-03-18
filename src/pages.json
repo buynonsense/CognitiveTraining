@@ -1,0 +1,40 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "认知训练"
+      }
+    },
+    {
+      "path": "pages/selection/selection",
+      "style": {
+        "navigationBarTitleText": "选择图形"
+      }
+    },
+    {
+      "path": "pages/training/training",
+      "style": {
+        "navigationBarTitleText": "训练计时"
+      }
+    },
+    {
+      "path": "pages/result/result",
+      "style": {
+        "navigationBarTitleText": "训练结果"
+      }
+    },
+    {
+      "path": "pages/finalResult/finalResult",
+      "style": {
+        "navigationBarTitleText": "训练完成"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "认知训练",
+    "navigationBarBackgroundColor": "#F8F8F8",
+    "backgroundColor": "#F8F8F8"
+  }
+}
