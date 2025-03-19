@@ -12,20 +12,15 @@
 </template>
 
 <script>
-import { resetTraining } from '@/utils/patternUtils';
-
 export default {
   data() {
     return {};
   },
   methods: {
     startTraining() {
-      // 重置并跳转到选择图形页面
-      resetTraining();
-
-      // 进入选择图形页面
+      // 直接跳转到用户信息页面
       uni.navigateTo({
-        url: '/pages/selection/selection'
+        url: '/pages/userInfo/userInfo'
       });
     }
   }

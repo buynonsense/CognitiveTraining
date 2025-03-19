@@ -34,7 +34,7 @@
 </template>
 
 <script>
-import { calculateScore, saveTrainingRecord, updateTrainingProgress, getTrainingProgress } from '@/utils/patternUtils';
+import { calculateScore, saveTrainingRecord, updateTrainingProgress, getTrainingProgress, updateSelectionPool } from '@/utils/patternUtils';
 
 export default {
     data() {
@@ -161,7 +161,7 @@ export default {
             if (this.selectedPattern.roundGroup === 4 || progress.currentRoundGroup === 4) {
                 const fourthRoundTimes = uni.getStorageSync('fourthRoundTimes') || {};
                 fourthRoundTimes[this.selectedPattern.type] = timeUsed;
-                uni.setStorageSync('fourthRoundTimes', fourthRoundTimes); // 修改这行，保存对象而不是单个值
+                uni.setStorageSync('fourthRoundTimes', fourthRoundTimes);
                 console.log(`记录第四轮图案 ${this.selectedPattern.type} 的完成时间: ${timeUsed}秒`);
             }
 
@@ -172,6 +172,9 @@ export default {
                 timeUsed,
                 this.selectedPattern.isFirstAppearance || false
             );
+
+            // 从选择池中移除已完成的图案
+            updateSelectionPool(this.selectedPattern);
 
             // 保存训练记录
             saveTrainingRecord(result);

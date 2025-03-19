@@ -62,7 +62,9 @@
 </template>
 
 <script>
-import { getTrainingProgress, initializeTraining, getSelectionPool, isTrainingCompleted, updateSelectionPool } from '@/utils/patternUtils';
+import {
+    getTrainingProgress, initializeTraining, getSelectionPool, isTrainingCompleted, updateSelectionPool, updateSelectionPoolForNewRound, generatePatterns
+} from '@/utils/patternUtils';
 
 export default {
     data() {
@@ -77,36 +79,48 @@ export default {
     onLoad() {
         // 检查训练是否已完成
         this.checkTrainingStatus();
-        
+
         // 获取当前选择池
         this.loadSelectionPool();
-        
+
         // 显示当前训练进度
         this.updateProgressDisplay();
+    },
+    onShow() {
+        // 重新检查训练状态
+        this.checkTrainingStatus();
+
+        // 每次显示页面时都重新加载选择池，确保数据最新
+        this.loadSelectionPool();
     },
     methods: {
         // 检查训练状态
         checkTrainingStatus() {
             const progress = getTrainingProgress();
-            this.isTrainingComplete = isTrainingCompleted() || 
-                (progress.currentRoundGroup === 3 && progress.completedInRound >= 6);
-                
+            this.isTrainingComplete = isTrainingCompleted() ||
+                (progress.currentRoundGroup === 4 && progress.completedInRound >= 6);
+
             console.log("训练完成状态:", this.isTrainingComplete);
-            
+            console.log("当前轮次:", progress.currentRoundGroup);
+            console.log("当前轮次已完成:", progress.completedInRound);
+
             // 如果训练已完成但没有标记为完成，则标记为完成
             if (this.isTrainingComplete && !progress.isCompleted) {
                 progress.isCompleted = true;
                 uni.setStorageSync('trainingProgress', progress);
+
+                // 清空选择池以防止继续训练
+                uni.setStorageSync('selectionPool', []);
             }
         },
-        
+
         // 跳转到最终结果页面
         goToFinalResult() {
             uni.redirectTo({
                 url: '/pages/finalResult/finalResult'
             });
         },
-        
+
         // 其余方法保持不变...
         selectPattern(pattern) {
             this.selectedPattern = pattern;
@@ -126,38 +140,92 @@ export default {
             });
         },
         loadSelectionPool() {
-            // 从选择池获取当前可选图案
-            this.patterns = getSelectionPool();
-            
-            // 显示当前进度，帮助调试
             const progress = getTrainingProgress();
-            console.log("当前轮次:", progress.currentRoundGroup);
-            console.log("当前轮次完成数:", progress.completedInRound);
-            console.log("总完成数:", progress.totalCompleted);
-            console.log("是否完成:", progress.isCompleted);
             
-            // 如果选择池为空，可能是训练已完成
-            if (!this.patterns || this.patterns.length === 0) {
-                if (isTrainingCompleted()) {
-                    console.log("训练已完成，跳转到最终结果");
-                    // 训练已全部完成，显示最终结果
-                    this.isTrainingComplete = true;
-                } else {
-                    console.log("选择池为空，但训练未标记为完成，重新初始化");
-                    // 异常情况，重新初始化
-                    initializeTraining();
-                    this.patterns = getSelectionPool();
+            // 输出当前进度信息，便于调试
+            console.log(`当前进度 - 轮次: ${progress.currentRoundGroup}, 总完成: ${progress.completedCount}, 当前轮次已完成: ${progress.completedInRound}`);
+            
+            // 检查是否训练已完成
+            if (progress.isCompleted) {
+                this.isTrainingComplete = true;
+                this.patterns = [];
+                return;
+            }
+            
+            // 特殊情况：准备进入第四轮
+            if (progress.currentRoundGroup === 4 && uni.getStorageSync('readyForRound4')) {
+                console.log("准备生成第四轮图案");
+                
+                try {
+                    // 清除标志
+                    uni.removeStorageSync('readyForRound4');
+                    
+                    // 生成第四轮的6个全新图案
+                    const fourthRoundPatterns = generatePatterns().map(pattern => ({
+                        ...pattern,
+                        isFirstAppearance: false,
+                        roundGroup: 4 // 标记为第4大轮次
+                    }));
+                    
+                    // 保存第四轮图案并设置为当前选择池
+                    uni.setStorageSync('fourthRoundPatterns', fourthRoundPatterns);
+                    uni.setStorageSync('selectionPool', [...fourthRoundPatterns]);
+                    
+                    this.patterns = fourthRoundPatterns;
+                    this.updateProgressDisplay();
+                    return;
+                } catch (error) {
+                    console.error("生成第四轮图案错误:", error);
                 }
             }
+            
+            // 获取并验证当前选择池
+            let pool = getSelectionPool();
+            
+            // 强制检查：确保选择池中只有当前轮次的图案
+            if (pool && pool.length > 0) {
+                const wrongRoundPatterns = pool.filter(p => p.roundGroup !== progress.currentRoundGroup);
+                if (wrongRoundPatterns.length > 0) {
+                    console.warn(`发现 ${wrongRoundPatterns.length} 个错误轮次的图案，将被过滤`);
+                    pool = pool.filter(p => p.roundGroup === progress.currentRoundGroup);
+                }
+            }
+            
+            // 仅当选择池为空时重建，不要因为数量少于6而重建（这样第二、三轮已完成的图案不会被恢复）
+            if (!pool || pool.length === 0) {
+                console.log(`选择池图案数量不足: ${pool?.length || 0}，尝试重建`);
+                
+                try {
+                    // 彻底重建当前轮次的选择池
+                    updateSelectionPoolForNewRound(progress.currentRoundGroup);
+                    pool = getSelectionPool();
+                    console.log(`重建后选择池图案数量: ${pool?.length || 0}`);
+                    
+                    // 再次检查数量，如果还是不足，说明该轮次确实训练了部分
+                    if (pool.length === 0) {
+                        console.error("警告：选择池为空，可能存在数据一致性问题");
+                    }
+                } catch (error) {
+                    console.error("重建选择池错误:", error);
+                }
+            }
+            
+            this.patterns = pool || [];
+            
+            // 确保显示的图案数量正确
+            console.log(`当前选择池图案数量: ${this.patterns.length}`);
+            
+            // 显示当前进度
+            this.updateProgressDisplay();
         },
-        
+
         updateProgressDisplay() {
             const progress = getTrainingProgress();
             let roundText = "第一轮";
             if (progress.currentRoundGroup === 2) roundText = "第二轮";
             if (progress.currentRoundGroup === 3) roundText = "第三轮";
             if (progress.currentRoundGroup === 4) roundText = "第四轮(最终比较)";
-            
+
             this.progressText = `${roundText} - 已完成 ${progress.totalCompleted}/24`;
         }
     }

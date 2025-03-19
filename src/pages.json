@@ -7,6 +7,12 @@
       }
     },
     {
+      "path": "pages/userInfo/userInfo",
+      "style": {
+        "navigationBarTitleText": "个人信息"
+      }
+    },
+    {
       "path": "pages/selection/selection",
       "style": {
         "navigationBarTitleText": "选择图形"

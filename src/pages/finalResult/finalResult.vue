@@ -5,6 +5,39 @@
             <view class="subtitle">您已完成全部24次认知训练</view>
         </view>
 
+        <!-- 添加用户信息卡片 -->
+        <view class="user-info-card" v-if="userInfo">
+            <view class="user-info-title">用户信息</view>
+            <view class="user-info-item">
+                <text class="info-label">姓名：</text>
+                <text class="info-value">{{ userInfo.name }}</text>
+            </view>
+            <view class="user-info-item">
+                <text class="info-label">出生日期：</text>
+                <text class="info-value">{{ userInfo.birthDate }}</text>
+            </view>
+            <view class="user-info-item">
+                <text class="info-label">性别：</text>
+                <text class="info-value">{{ userInfo.gender }}</text>
+            </view>
+            <view class="user-info-item">
+                <text class="info-label">电话：</text>
+                <text class="info-value">{{ userInfo.phone }}</text>
+            </view>
+            <view class="user-info-item" v-if="userInfo.occupation">
+                <text class="info-label">职业：</text>
+                <text class="info-value">{{ userInfo.occupation }}</text>
+            </view>
+            <view class="user-info-item" v-if="userInfo.education">
+                <text class="info-label">学历：</text>
+                <text class="info-value">{{ userInfo.education }}</text>
+            </view>
+            <view class="user-info-item" v-if="userInfo.educationExp">
+                <text class="info-label">教育经历：</text>
+                <text class="info-value">{{ userInfo.educationExp }}</text>
+            </view>
+        </view>
+
         <view class="result-card">
             <view class="avatar-section">
                 <view class="avatar-container">
@@ -58,6 +91,7 @@ import {
 export default {
     data() {
         return {
+            userInfo: null,
             progress: {
                 currentRound: 4,
                 completedCount: 24,
@@ -79,6 +113,9 @@ export default {
         };
     },
     onLoad() {
+        // 获取用户信息
+        this.userInfo = uni.getStorageSync('userInfo');
+
         // 获取训练进度
         const progress = getTrainingProgress();
         if (progress) {
@@ -112,6 +149,7 @@ export default {
 
         // 保存训练结果
         uni.setStorageSync('finalTrainingResult', {
+            userInfo: this.userInfo,
             totalScore: this.progress.totalScore,
             memoryResult: this.memoryResult,
             improvementResult: this.improvementResult,
@@ -120,7 +158,7 @@ export default {
     },
     methods: {
         startNewTraining() {
-            // 重置并开始新的训练
+            // 重置并开始新的训练，但保留用户信息
             resetTraining();
             initializeTraining();
 
@@ -145,6 +183,42 @@ export default {
     align-items: center;
     min-height: 100vh;
     background-color: #f6f8fa;
+}
+
+/* 添加用户信息卡片样式 */
+.user-info-card {
+    width: 92%;
+    background-color: #fff;
+    border-radius: 20rpx;
+    box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.05);
+    padding: 30rpx;
+    margin-bottom: 30rpx;
+}
+
+.user-info-title {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 20rpx;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10rpx;
+}
+
+.user-info-item {
+    display: flex;
+    margin-bottom: 15rpx;
+    font-size: 28rpx;
+    line-height: 1.5;
+}
+
+.info-label {
+    color: #666;
+    width: 180rpx;
+}
+
+.info-value {
+    color: #333;
+    flex: 1;
 }
 
 .header {

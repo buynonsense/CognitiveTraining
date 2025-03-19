@@ -50,7 +50,9 @@
         </view>
 
         <view class="btn-container">
-            <wd-button type="primary" @click="continueTraining">再次训练</wd-button>
+            <wd-button type="primary" @click="continueTraining">
+                {{ isLastTraining ? '查看结果' : '再次训练' }}
+            </wd-button>
             <wd-button type="info" class="btn" @click="backToHome">返回首页</wd-button>
         </view>
     </view>
@@ -69,7 +71,8 @@ export default {
                 correctCells: [],
                 selectedCells: []
             },
-            gridNumbers: []
+            gridNumbers: [],
+            isLastTraining: false // 新增变量，标记是否是最后一个训练
         };
     },
     computed: {
@@ -119,6 +122,13 @@ export default {
                     this.gridNumbers = Array(25).fill().map(() => Math.floor(Math.random() * 9) + 1);
                 }
             }
+            
+            // 检查是否是最后一个训练
+            const progress = getTrainingProgress();
+            this.isLastTraining = (progress.completedCount === 24 || progress.isCompleted === true || 
+                (progress.currentRoundGroup === 4 && progress.completedInRound >= 6));
+            
+            console.log("当前训练进度:", progress.completedCount, ", 是否是最后一个:", this.isLastTraining);
         } else {
             // 没有结果，返回首页
             uni.showToast({

@@ -243,11 +243,6 @@ export function getTrainingProgress() {
 
 /**
  * 更新训练进度
- * @param {number|string|object} patternIdentifier 图案标识符（可以是索引、类型或整个对象）
- * @param {number} score 得分
- * @param {number} timeUsed 用时
- * @param {boolean} isFirstAppearance 是否首次出现
- * @returns {object} 更新后的进度
  */
 export function updateTrainingProgress(patternIdentifier, score, timeUsed, isFirstAppearance) {
     const progress = getTrainingProgress();
@@ -260,7 +255,6 @@ export function updateTrainingProgress(patternIdentifier, score, timeUsed, isFir
         isFirstAppearance = patternIdentifier.isFirstAppearance;
     } else if (typeof patternIdentifier === 'string') {
         patternType = patternIdentifier;
-        // 尝试确定轮次
         roundGroup = progress.currentRoundGroup || 1;
     } else {
         // 如果是数字索引
@@ -289,158 +283,203 @@ export function updateTrainingProgress(patternIdentifier, score, timeUsed, isFir
             progress.firstAppearanceTimes[patternType] = timeUsed;
         }
     }
-    // 如果是第三大轮次，记录用时用于后续比较
+    // 第二轮训练记录已完成的图案类型
+    else if (roundGroup === 2 || progress.currentRoundGroup === 2) {
+        // 初始化第二轮完成的图案记录
+        if (!progress.secondRoundCompleted) progress.secondRoundCompleted = [];
+        
+        // 记录已完成的图案信息
+        progress.secondRoundCompleted.push({
+            type: patternType,
+            timeUsed: timeUsed
+        });
+    }
+    // 第三轮训练记录
     else if (roundGroup === 3 || progress.currentRoundGroup === 3) {
+        if (!progress.thirdRoundCompleted) progress.thirdRoundCompleted = [];
+        
+        progress.thirdRoundCompleted.push({
+            type: patternType,
+            timeUsed: timeUsed
+        });
+        
+        // 记录第三轮用时用于后续比较
         const thirdRoundTimes = uni.getStorageSync('thirdRoundTimes') || {};
         thirdRoundTimes[patternType] = timeUsed;
         uni.setStorageSync('thirdRoundTimes', thirdRoundTimes);
     }
     
-    // 检查轮次变化 - 关键修改部分
-    console.log(`当前状态：当前轮次 ${progress.currentRoundGroup}，已完成总数 ${progress.completedCount}`);
+    // 检查轮次变化 - 修复轮次隔离问题
+    console.log(`当前状态：当前轮次 ${progress.currentRoundGroup}，已完成总数 ${progress.completedCount}，当前轮次已完成 ${progress.completedInRound}`);
     
     // 完成第6个训练项，进入第2大轮次
     if (progress.completedCount === 6 && progress.currentRoundGroup === 1) {
         progress.currentRoundGroup = 2;
         progress.completedInRound = 0;
-        console.log("已完成6个训练，进入第二轮次");
+        console.log("已完成第一轮6个训练，进入第二轮次");
+        
+        // 强制清空并完全重建选择池，确保有6个图案
+        uni.removeStorageSync('selectionPool');
+        updateSelectionPoolForNewRound(2);
     } 
-    // 完成第12个训练项，进入第3大轮次（关键修复）
+    // 完成第12个训练项，进入第3大轮次
     else if (progress.completedCount === 12 && progress.currentRoundGroup === 2) {
         progress.currentRoundGroup = 3;
         progress.completedInRound = 0;
-        console.log("已完成12个训练，进入第三轮次");
+        console.log("已完成第二轮6个训练，进入第三轮次");
         
-        // 生成第三大轮次的全新图案
-        const thirdRoundPatterns = generatePatterns().map(pattern => ({
-            ...pattern,
-            isFirstAppearance: false,
-            roundGroup: 3 // 标记为第3大轮次
-        }));
-        
-        // 保存第三轮次图案
-        uni.setStorageSync('thirdRoundPatterns', thirdRoundPatterns);
+        // 强制清空并完全重建选择池，确保有6个图案
+        uni.removeStorageSync('selectionPool');
+        updateSelectionPoolForNewRound(3);
     }
-    // 完成第18个训练项，应该进入第4大轮次而不是结束训练
+    // 完成第18个训练项，进入第4大轮次
     else if (progress.completedCount === 18 && progress.currentRoundGroup === 3) {
-        progress.currentRoundGroup = 4; // 进入第4轮，不是结束
+        progress.currentRoundGroup = 4;
         progress.completedInRound = 0;
-        console.log("已完成18个训练，进入第四轮次（比较测试）");
+        progress.thirdRoundCompleted = true;
+        console.log("已完成第三轮6个训练，进入第四轮次（比较测试）");
         
-        // 生成第四轮的6个全新图案
-        const fourthRoundPatterns = generatePatterns().map(pattern => ({
-            ...pattern,
-            isFirstAppearance: false,
-            roundGroup: 4 // 标记为第4大轮次
-        }));
-        
-        // 保存第四轮图案
-        uni.setStorageSync('fourthRoundPatterns', fourthRoundPatterns);
-    }
-    // 完成第24个训练项，才真正标记训练完成
-    else if (progress.completedCount === 24) {
-        progress.isCompleted = true;
-        console.log("已完成全部24次训练，训练结束！");
+        // 清除旧选择池，并设置标志以便生成第四轮图案
+        uni.removeStorageSync('selectionPool');
+        uni.setStorageSync('readyForRound4', true);
     }
     
-    // 检查是否完成了所有训练
-    if (progress.currentRoundGroup === 4 && progress.completedInRound >= 6) {
-        console.log("所有训练已完成！设置isCompleted为true");
+    // 完成第24个训练项，才真正标记训练完成
+    else if (progress.completedCount === 24 && progress.currentRoundGroup === 4) {
         progress.isCompleted = true;
+        console.log("已完成全部24次训练，训练结束！");
         
         // 计算第一轮和第四轮的时间比值
         calculateTimeRatios();
     }
     
     uni.setStorageSync('trainingProgress', progress);
-    
-    // 更新选择池函数也需要修改
-    return updateSelectionPoolFixed(patternType, progress);
+    return progress;
 }
 
 /**
- * 更新后的选择池函数，修复进入第三轮的问题
+ * 为新的轮次更新选择池
+ * @param {number} roundGroup 新的轮次编号
  */
-function updateSelectionPoolFixed(patternType, progress) {
-    let pool = uni.getStorageSync('selectionPool') || [];
+export function updateSelectionPoolForNewRound(roundGroup) {
+    console.log(`完全重建第${roundGroup}轮选择池`);
     
-    // 如果训练已完成，直接返回空数组
-    if (progress.isCompleted) {
-        console.log("训练已完成，返回空选择池");
-        uni.setStorageSync('selectionPool', []);
-        return [];
-    }
+    // 彻底清空现有选择池
+    uni.removeStorageSync('selectionPool');
     
-    // 从选择池中移除当前图案
-    pool = pool.filter(p => p.type !== patternType);
-    
-    // 根据当前轮次更新选择池
-    if (progress.currentRoundGroup === 1) {
-        // 第一轮正常进行
-        if (pool.length === 0 && progress.completedInRound < 6) {
-            // 异常情况：选择池空了但还没完成第一轮
-            const initialPatterns = uni.getStorageSync('initialPatterns') || [];
+    if (roundGroup === 1) {
+        // 加载第一轮图案
+        const initialPatterns = uni.getStorageSync('initialPatterns') || [];
+        if (initialPatterns.length > 0) {
+            const progress = getTrainingProgress();
+            const completedTypes = Object.keys(progress.firstAppearanceTimes || {});
+            
+            // 过滤出未完成的图案
             const remainingPatterns = initialPatterns.filter(p => 
-                !progress.firstAppearanceTimes || !progress.firstAppearanceTimes[p.type]);
-            pool = [...remainingPatterns];
+                !completedTypes.includes(p.type)
+            );
+            
+            uni.setStorageSync('selectionPool', remainingPatterns);
+            console.log(`已为第一轮恢复 ${remainingPatterns.length} 个未完成的图案`);
         }
     } 
-    else if (progress.currentRoundGroup === 2) {
-        // 第二轮
-        if (pool.length === 0 || (progress.completedInRound % 6 === 0 && progress.completedInRound > 0)) {
-            // 需要补充第二轮的图案
-            const secondRoundPatterns = uni.getStorageSync('secondRoundPatterns') || [];
-            // 计算已使用的模式数量
-            const usedCount = progress.completedInRound;
-            // 获取未使用的模式
-            const remainingPatterns = secondRoundPatterns.slice(usedCount, usedCount + 6);
-            pool = [...remainingPatterns];
-            console.log(`补充第二轮图案，当前已完成 ${progress.completedInRound}，添加 ${remainingPatterns.length} 个图案`);
+    else if (roundGroup === 2) {
+        // 加载第二轮次的图案（第一轮次图案的副本）
+        const secondRoundPatterns = uni.getStorageSync('secondRoundPatterns') || [];
+        if (secondRoundPatterns.length > 0) {
+            uni.setStorageSync('selectionPool', [...secondRoundPatterns]);
+            console.log(`已为第二轮加载 ${secondRoundPatterns.length} 个图案`);
         }
-    }
-    else if (progress.currentRoundGroup === 3) {
-        // 第三轮
-        if (pool.length === 0) {
-            // 需要使用第三轮的图案
-            const thirdRoundPatterns = uni.getStorageSync('thirdRoundPatterns') || [];
-            if (thirdRoundPatterns.length > 0) {
-                pool = [...thirdRoundPatterns];
-                console.log(`使用第三轮图案，共 ${thirdRoundPatterns.length} 个`);
-            } else {
-                // 如果没有第三轮图案，生成新的
-                const newPatterns = generatePatterns().map(pattern => ({
-                    ...pattern,
-                    isFirstAppearance: false,
-                    roundGroup: 3
-                }));
-                pool = [...newPatterns];
-                uni.setStorageSync('thirdRoundPatterns', newPatterns);
-                console.log(`生成新的第三轮图案，共 ${newPatterns.length} 个`);
-            }
+    } 
+    else if (roundGroup === 3) {
+        // 加载第三轮次的图案
+        const thirdRoundPatterns = uni.getStorageSync('thirdRoundPatterns') || [];
+        if (thirdRoundPatterns.length > 0) {
+            uni.setStorageSync('selectionPool', [...thirdRoundPatterns]);
+            console.log(`已为第三轮加载 ${thirdRoundPatterns.length} 个图案`);
         }
+    } 
+    else if (roundGroup === 4) {
+        // 第四轮由 selection.vue 中的特殊处理生成和加载
+        console.log("第四轮图案将在选择页面中生成");
     }
-    // 在updateSelectionPoolFixed函数中添加第四轮的处理
+}
 
-    // 如果是第四轮
-    else if (progress.currentRoundGroup === 4) {
-        // 第四轮
-        if (pool.length === 0) {
-            // 使用第四轮的全新图案
-            const fourthRoundPatterns = uni.getStorageSync('fourthRoundPatterns') || [];
-            if (fourthRoundPatterns.length > 0) {
-                pool = [...fourthRoundPatterns];
-                console.log(`使用第四轮全新图案，共 ${fourthRoundPatterns.length} 个`);
-            } else {
-                // 如果没有第四轮图案，生成新的
-                const newPatterns = generatePatterns().map(pattern => ({
-                    ...pattern,
-                    isFirstAppearance: false,
-                    roundGroup: 4
-                }));
-                pool = [...newPatterns];
-                uni.setStorageSync('fourthRoundPatterns', newPatterns);
-                console.log(`生成新的第四轮图案，共 ${newPatterns.length} 个`);
-            }
+/**
+ * 从选择池中移除已训练的图案，确保每轮最多有6个图案
+ */
+export function updateSelectionPool(pattern) {
+    let pool = uni.getStorageSync('selectionPool') || [];
+    const progress = getTrainingProgress();
+    const MAX_POOL_SIZE = 6; // 选择池中最多显示6个图案
+    
+    // 从选择池中移除当前图案
+    if (pattern && pattern.type) {
+        pool = pool.filter(p => p.type !== pattern.type);
+    }
+    
+    // 严格确保选择池中只有当前轮次的图案
+    pool = pool.filter(p => p.roundGroup === progress.currentRoundGroup);
+    
+    // 特别处理第一轮的情况，确保只恢复第一轮未完成的图案
+    if (progress.currentRoundGroup === 1) {
+        // 获取初始图案
+        const initialPatterns = uni.getStorageSync('initialPatterns') || [];
+        if (initialPatterns.length > 0) {
+            // 找出已完成的图案类型
+            const completedTypes = Object.keys(progress.firstAppearanceTimes || {});
+            
+            // 清空当前池，完全重建，确保只包含第一轮未完成的图案
+            pool = initialPatterns.filter(p => 
+                !completedTypes.includes(p.type) && 
+                (!pattern || p.type !== pattern.type)
+            );
+            
+            console.log(`第一轮选择池重建完成，共有 ${pool.length} 个未完成的图案`);
+        }
+    }
+    // 处理第二轮
+    else if (progress.currentRoundGroup === 2) {
+        // 获取第二轮图案
+        const secondRoundPatterns = uni.getStorageSync('secondRoundPatterns') || [];
+        // 获取已完成的第二轮图案类型
+        const completedTypes = (progress.secondRoundCompleted || []).map(item => item.type);
+        
+        // 清空当前池，重建为未完成的第二轮图案
+        pool = secondRoundPatterns.filter(p => !completedTypes.includes(p.type));
+        
+        console.log(`第二轮选择池重建完成，过滤掉 ${completedTypes.length} 个已完成图案，剩余 ${pool.length} 个未完成的图案`);
+    }
+    // 处理第三轮
+    else if (progress.currentRoundGroup === 3) {
+        // 获取第三轮图案
+        const thirdRoundPatterns = uni.getStorageSync('thirdRoundPatterns') || [];
+        // 获取已完成的第三轮图案类型
+        const completedTypes = (progress.thirdRoundCompleted || []).map(item => item.type);
+        
+        // 清空当前池，重建为未完成的第三轮图案
+        pool = thirdRoundPatterns.filter(p => !completedTypes.includes(p.type));
+        
+        console.log(`第三轮选择池重建完成，过滤掉 ${completedTypes.length} 个已完成图案，剩余 ${pool.length} 个未完成的图案`);
+    }
+    
+    // 确保池中图案数量不超过最大限制
+    if (pool.length > MAX_POOL_SIZE) {
+        pool = pool.slice(0, MAX_POOL_SIZE);
+    }
+    
+    // 如果选择池为空但训练未完成，可能出现了异常情况，尝试完全重建
+    if (pool.length === 0 && !progress.isCompleted) {
+        console.log(`警告：选择池为空，尝试完全重建第${progress.currentRoundGroup}轮选择池`);
+        if (progress.currentRoundGroup === 1) {
+            // 重新初始化第一轮
+            const initialPatterns = uni.getStorageSync('initialPatterns') || [];
+            const completedTypes = Object.keys(progress.firstAppearanceTimes || {});
+            pool = initialPatterns.filter(p => !completedTypes.includes(p.type));
+        } else {
+            // 使用专门的轮次重建函数
+            updateSelectionPoolForNewRound(progress.currentRoundGroup);
+            return uni.getStorageSync('selectionPool') || [];
         }
     }
     
@@ -493,36 +532,38 @@ export function initializeTraining() {
     // 生成第一大轮次的6个基本图案
     const firstRoundPatterns = generatePatterns();
 
-    // 生成第二大轮次的12个图案副本（每个图案2个副本）
-    const secondRoundPatterns = [];
-    firstRoundPatterns.forEach(pattern => {
-        // 为每个图案创建2个副本
-        for (let i = 0; i < 2; i++) {
-            secondRoundPatterns.push({
-                ...pattern,
-                isFirstAppearance: false,
-                roundGroup: 2 // 标记为第2大轮次
-            });
-        }
-    });
-
-    // 随机打乱第二轮次顺序
-    for (let i = secondRoundPatterns.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [secondRoundPatterns[i], secondRoundPatterns[j]] = [secondRoundPatterns[j], secondRoundPatterns[i]];
-    }
-
     // 为第一轮次添加标记
     const markedFirstRoundPatterns = firstRoundPatterns.map(pattern => ({
         ...pattern,
         isFirstAppearance: true,
         roundGroup: 1 // 标记为第1大轮次
     }));
+    
+    // 为第二轮准备第一轮图案的副本，但保持6个图案
+    const secondRoundPatterns = firstRoundPatterns.map(pattern => ({
+        ...pattern,
+        isFirstAppearance: false,
+        roundGroup: 2 // 标记为第2大轮次
+    }));
+    
+    // 随机打乱第二轮次顺序
+    shuffleArray(secondRoundPatterns);
+    
+    // 为第三轮准备第一轮图案的另一个副本
+    const thirdRoundPatterns = firstRoundPatterns.map(pattern => ({
+        ...pattern,
+        isFirstAppearance: false,
+        roundGroup: 3 // 标记为第3大轮次
+    }));
+    
+    // 随机打乱第三轮次顺序
+    shuffleArray(thirdRoundPatterns);
 
-    // 保存初始图案和选择池
+    // 保存所有轮次的图案
     uni.setStorageSync('initialPatterns', markedFirstRoundPatterns);
     uni.setStorageSync('selectionPool', [...markedFirstRoundPatterns]); // 初始选择池是第一轮次的图案
     uni.setStorageSync('secondRoundPatterns', secondRoundPatterns);
+    uni.setStorageSync('thirdRoundPatterns', thirdRoundPatterns);
 
     // 设置训练进度
     const progress = {
@@ -538,7 +579,8 @@ export function initializeTraining() {
 
     return {
         firstRoundPatterns,
-        secondRoundPatterns
+        secondRoundPatterns,
+        thirdRoundPatterns
     };
 }
 
@@ -548,80 +590,6 @@ export function initializeTraining() {
  */
 export function getSelectionPool() {
     const pool = uni.getStorageSync('selectionPool') || [];
-    return pool;
-}
-
-/**
- * 从选择池中移除已训练的图案，根据当前进度添加新图案
- * @param {Object} pattern 已完成训练的图案
- */
-export function updateSelectionPool(pattern) {
-    let pool = uni.getStorageSync('selectionPool') || [];
-    const progress = getTrainingProgress();
-    
-    // 如果训练已完成，直接返回空数组
-    if (progress.isCompleted) {
-        console.log("训练已完成，返回空选择池");
-        uni.setStorageSync('selectionPool', []);
-        return [];
-    }
-    
-    // 从选择池中移除当前图案
-    pool = pool.filter(p => p.type !== pattern.type);
-    
-    // 根据当前大轮次的进度，添加新图案
-    if (progress.currentRoundGroup === 1 && progress.completedInRound >= 6) {
-        // 第一大轮次完成，开始第二大轮次
-        const secondRoundPatterns = uni.getStorageSync('secondRoundPatterns') || [];
-        // 只添加12个图案中的前6个到选择池
-        pool = secondRoundPatterns.slice(0, 6);
-        
-        // 更新进度为第二大轮次
-        progress.currentRoundGroup = 2;
-        progress.completedInRound = 0;
-        uni.setStorageSync('trainingProgress', progress);
-        console.log("进入第二大轮次");
-    } else if (progress.currentRoundGroup === 2) {
-        // 检查是否完成了第二大轮次
-        if (progress.completedInRound >= 12 || progress.completedCount >= 18) { // 修改判断条件
-            console.log("第二大轮次完成，准备进入第三大轮次");
-            // 第二大轮次完成，生成第三大轮次的全新图案
-            const thirdRoundPatterns = generatePatterns().map(pattern => ({
-                ...pattern,
-                isFirstAppearance: false,
-                roundGroup: 3 // 标记为第3大轮次
-            }));
-
-            // 更新进度为第三大轮次
-            progress.currentRoundGroup = 3;
-            progress.completedInRound = 0;
-            uni.setStorageSync('trainingProgress', progress);
-
-            // 设置第三轮的选择池
-            pool = thirdRoundPatterns;
-            console.log("进入第三大轮次，使用全新图案");
-        } else {
-            // 第二大轮次，从剩余的图案中添加一个到选择池
-            const secondRoundPatterns = uni.getStorageSync('secondRoundPatterns') || [];
-            const usedCount = 6 + progress.completedInRound;
-            
-            // 确保不超出数组范围
-            if (usedCount < secondRoundPatterns.length) {
-                pool.push(secondRoundPatterns[usedCount]);
-                console.log(`添加第二轮第${usedCount+1}个图案到选择池`);
-            }
-        }
-    } else if (progress.currentRoundGroup === 3 && progress.completedInRound >= 6) {
-        // 第三轮已完成，标记训练完成
-        console.log("第三轮已完成，标记训练为已完成状态");
-        progress.isCompleted = true;
-        uni.setStorageSync('trainingProgress', progress);
-        
-        // 清空选择池，防止继续训练
-        pool = [];
-    }
-    
-    uni.setStorageSync('selectionPool', pool);
     return pool;
 }
 
