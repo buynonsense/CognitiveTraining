@@ -199,7 +199,6 @@ export default {
       this.datePickerVisible = false;
     },
     
-    // ... 其他现有方法保持不变
     setGender(gender) {
       this.userInfo.gender = gender;
       this.validateForm('gender');
@@ -273,7 +272,7 @@ export default {
       // 初始化训练并跳转到选择页面
       initializeTraining();
       
-      uni.navigateTo({
+      uni.redirectTo({
         url: '/pages/selection/selection'
       });
     }
@@ -292,13 +291,13 @@ export default {
 
 .header {
   text-align: center;
-  margin-bottom: 30rpx; /* 减小margin */
+  margin-bottom: 30rpx;
 }
 
 .title {
   font-size: 40rpx;
   font-weight: bold;
-  margin-bottom: 8rpx; /* 减小margin */
+  margin-bottom: 8rpx;
 }
 
 .subtitle {
@@ -308,16 +307,16 @@ export default {
 
 .form-container {
   flex: 1;
-  padding: 10rpx 0; /* 减小padding */
+  padding: 10rpx 0;
 }
 
 .form-item {
-  margin-bottom: 20rpx; /* 减小item间距 */
+  margin-bottom: 20rpx;
 }
 
 .label {
   font-size: 28rpx;
-  margin-bottom: 6rpx; /* 减小margin */
+  margin-bottom: 6rpx;
   display: block;
 }
 
@@ -417,30 +416,38 @@ export default {
 .btn-container {
   margin-top: 20rpx;
   padding: 10rpx 0;
-  position: relative; /* 相对定位 */
-  bottom: 0;
   width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .submit-btn {
-  width: 100%;
+  width: 90%;
   height: 90rpx;
   border-radius: 45rpx;
   font-size: 32rpx;
 }
 
-/* 可选: 确保较长表单时按钮保持在底部可见 */
+/* 添加微信小程序特定样式 */
+/* #ifdef MP-WEIXIN */
+.btn-container {
+  box-sizing: border-box;
+  padding: 10rpx 30rpx 30rpx;
+}
+/* #endif */
+
 @media screen and (max-height: 1200px) {
   .form-item {
     margin-bottom: 15rpx;
   }
   
   .input, .picker, .date-picker, .gender-option {
-    height: 70rpx; /* 减小输入框高度 */
+    height: 70rpx;
   }
   
   .textarea {
-    height: 120rpx; /* 减小文本框高度 */
+    height: 120rpx;
   }
 }
 </style>

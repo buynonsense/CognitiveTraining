@@ -43,7 +43,7 @@ export default {
             selectedCells: [],
             gridNumbers: [],
             startTime: 0,
-            remainingTime: 30, // 改为30秒
+            remainingTime: 30,
             timer: null,
             targetPositions: []
         };
@@ -143,9 +143,9 @@ export default {
                 score,
                 correctCells: this.targetPositions,
                 selectedCells: this.selectedCells,
-                gridNumbers: this.gridNumbers, // 确保保存网格数字
-                round: this.selectedPattern.roundGroup || progress.currentRoundGroup || 1, // 记录当前轮次
-                isFirstAppearance: this.selectedPattern.isFirstAppearance || false // 是否首次出现
+                gridNumbers: this.gridNumbers,
+                round: this.selectedPattern.roundGroup || progress.currentRoundGroup || 1,
+                isFirstAppearance: this.selectedPattern.isFirstAppearance || false
             };
 
             uni.setStorageSync('trainingResult', result);
@@ -179,8 +179,8 @@ export default {
             // 保存训练记录
             saveTrainingRecord(result);
 
-            // 跳转到结果页面
-            uni.navigateTo({
+            // 使用redirectTo替代navigateTo，避免页面栈增加
+            uni.redirectTo({
                 url: '/pages/result/result'
             });
         },

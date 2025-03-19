@@ -151,13 +151,13 @@ export default {
                 (progress.currentRoundGroup === 3 && progress.completedInRound >= 6)) {
                 console.log("训练已完成，跳转到最终结果页面");
                 // 全部训练已完成，跳转到最终结果页
-                uni.redirectTo({
+                uni.reLaunch({
                     url: '/pages/finalResult/finalResult'
                 });
             } else {
                 console.log("训练未完成，返回选择页面继续");
                 // 继续训练，返回选择页面
-                uni.redirectTo({
+                uni.reLaunch({
                     url: '/pages/selection/selection'
                 });
             }

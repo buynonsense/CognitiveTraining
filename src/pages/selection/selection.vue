@@ -116,12 +116,11 @@ export default {
 
         // 跳转到最终结果页面
         goToFinalResult() {
-            uni.redirectTo({
+            uni.reLaunch({
                 url: '/pages/finalResult/finalResult'
             });
         },
 
-        // 其余方法保持不变...
         selectPattern(pattern) {
             this.selectedPattern = pattern;
             this.showPatternPopup = true;
@@ -135,7 +134,7 @@ export default {
         },
         startTraining() {
             // 跳转到训练页面
-            uni.navigateTo({
+            uni.redirectTo({
                 url: '/pages/training/training'
             });
         },
