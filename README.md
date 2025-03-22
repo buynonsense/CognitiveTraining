@@ -12,8 +12,8 @@ Cognitive Training is a mobile app that boosts memory skills. Users find pattern
 ### 用户信息管理
 
 在开始训练前，用户需填写基本信息，包括：
-- **必填项**：姓名、出生日期、性别
-- **选填项**：电话、职业、学历等
+- **必填项**：姓名、出生日期、性别、电话
+- **选填项**：职业、学历等
 
 用户信息用于生成个性化的训练方案，并在最终评估中提供参考。
 
