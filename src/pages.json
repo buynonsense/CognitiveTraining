@@ -3,13 +3,20 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "认知训练"
+        "navigationBarTitleText": "认知训练-数字划消",
+        "usingComponents": {
+          "wd-button": "/node_modules/wot-design-uni/components/wd-button/wd-button"
+        }
       }
     },
     {
       "path": "pages/userInfo/userInfo",
       "style": {
-        "navigationBarTitleText": "个人信息"
+        "navigationBarTitleText": "个人信息",
+        "usingComponents": {
+          "wd-button": "/node_modules/wot-design-uni/components/wd-button/wd-button",
+          "wd-popup": "/node_modules/wot-design-uni/components/wd-popup/wd-popup"
+        }
       }
     },
     {
@@ -42,5 +49,6 @@
     "navigationBarTitleText": "认知训练",
     "navigationBarBackgroundColor": "#F8F8F8",
     "backgroundColor": "#F8F8F8"
-  }
+  },
+  "usingComponents": {}
 }

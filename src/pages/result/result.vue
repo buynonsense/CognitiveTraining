@@ -1,5 +1,8 @@
 <template>
     <view class="container">
+        <!-- 添加BGM控制组件 -->
+        <BgmControl />
+        
         <view class="title">训练结果</view>
 
         <view class="result-card">
@@ -60,8 +63,12 @@
 
 <script>
 import { isTrainingCompleted, getTrainingProgress } from '@/utils/patternUtils';
+import BgmControl from '@/components/BgmControl.vue'
 
 export default {
+    components: {
+        BgmControl
+    },
     data() {
         return {
             result: {

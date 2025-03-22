@@ -1,5 +1,8 @@
 <template>
   <view class="container">
+    <!-- 添加BGM控制组件 -->
+    <BgmControl />
+    
     <view class="header">
       <view class="title">个人信息</view>
       <view class="subtitle">请填写您的基本信息以开始训练</view>
@@ -90,8 +93,12 @@
 
 <script>
 import { initializeTraining } from '@/utils/patternUtils';
+import BgmControl from '@/components/BgmControl.vue'
 
 export default {
+  components: {
+    BgmControl
+  },
   data() {
     // 生成年、月、日选项
     const generateYears = () => {

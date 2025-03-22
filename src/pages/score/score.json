@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "训练成绩",
+  "usingComponents": {
+    "wd-button": "wot-design-uni/components/wd-button/wd-button"
+  }
+}

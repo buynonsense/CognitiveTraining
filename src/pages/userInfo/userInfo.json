@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "个人信息",
+  "usingComponents": {
+    "wd-button": "wot-design-uni/components/wd-button/wd-button",
+    "wd-popup": "wot-design-uni/components/wd-popup/wd-popup"
+  }
+}

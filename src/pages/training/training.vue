@@ -1,5 +1,8 @@
 <template>
     <view class="container">
+        <!-- 添加BGM控制组件 -->
+        <BgmControl />
+        
         <view class="header">
             <view class="timer">计时：{{ remainingTime }}</view>
         </view>
@@ -35,8 +38,12 @@
 
 <script>
 import { calculateScore, saveTrainingRecord, updateTrainingProgress, getTrainingProgress, updateSelectionPool } from '@/utils/patternUtils';
+import BgmControl from '@/components/BgmControl.vue'
 
 export default {
+    components: {
+        BgmControl
+    },
     data() {
         return {
             selectedPattern: null,
@@ -264,7 +271,7 @@ export default {
 }
 
 .target-selected {
-    background-color: #409EFF;
+    background-color: #22c55e;
     color: white;
 }
 
@@ -291,7 +298,7 @@ export default {
 }
 
 .selected {
-    background-color: #409EFF;
+    background-color: #22c55e;
     color: white;
 }
 

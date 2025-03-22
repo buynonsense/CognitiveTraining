@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "选择训练目标",
+  "usingComponents": {
+    "wd-button": "wot-design-uni/components/wd-button/wd-button"
+  }
+}

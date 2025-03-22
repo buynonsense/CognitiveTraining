@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "认知训练-数字划消",
+  "usingComponents": {
+    "wd-button": "wot-design-uni/components/wd-button/wd-button"
+  }
+}

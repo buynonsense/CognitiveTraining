@@ -26,6 +26,12 @@
                         </template>
                     </view>
                 </view>
+                
+                <!-- 添加已完成标记 -->
+                <view v-if="isPatternCompleted(pattern)" class="completed-mark">
+                    <text class="completed-icon">✓</text>
+                    <text class="completed-text">已完成</text>
+                </view>
             </view>
         </view>
 
@@ -63,7 +69,8 @@
 
 <script>
 import {
-    getTrainingProgress, initializeTraining, getSelectionPool, isTrainingCompleted, updateSelectionPool, updateSelectionPoolForNewRound, generatePatterns
+    getTrainingProgress, initializeTraining, getSelectionPool, isTrainingCompleted,
+    updateSelectionPool, updateSelectionPoolForNewRound, generatePatterns, isPatternCompleted
 } from '@/utils/patternUtils';
 
 export default {
@@ -121,7 +128,21 @@ export default {
             });
         },
 
+        // 添加检查图案是否已完成的方法
+        isPatternCompleted(pattern) {
+            return isPatternCompleted(pattern);
+        },
+
         selectPattern(pattern) {
+            // 如果图案已完成，显示提示
+            if (this.isPatternCompleted(pattern)) {
+                uni.showToast({
+                    title: '该图形已完成训练',
+                    icon: 'none'
+                });
+                return;
+            }
+            
             this.selectedPattern = pattern;
             this.showPatternPopup = true;
 
@@ -151,16 +172,73 @@ export default {
                 return;
             }
             
-            // 特殊情况：准备进入第四轮
-            if (progress.currentRoundGroup === 4 && uni.getStorageSync('readyForRound4')) {
-                console.log("准备生成第四轮图案");
+            // 针对第一轮的特殊处理
+            if (progress.currentRoundGroup === 1) {
+                console.log("加载第一轮图案");
+                let initialPatterns = uni.getStorageSync('initialPatterns');
+                
+                // 如果初始图案不存在或为空，则重新初始化训练
+                if (!initialPatterns || initialPatterns.length === 0) {
+                    console.log("初始图案不存在，重新初始化训练");
+                    const result = initializeTraining();
+                    initialPatterns = result.firstRoundPatterns.map(p => ({
+                        ...p,
+                        isFirstAppearance: true,
+                        roundGroup: 1
+                    }));
+                    uni.setStorageSync('initialPatterns', initialPatterns);
+                }
+                
+                // 强制使用初始图案，不管选择池现状如何
+                uni.setStorageSync('selectionPool', [...initialPatterns]); // 设置为完整的浅拷贝
+                this.patterns = initialPatterns;
+                this.updateProgressDisplay();
+                return;
+            }
+            
+            // 针对第二轮的特殊处理
+            if (progress.currentRoundGroup === 2) {
+                console.log("加载第二轮图案");
+                const secondRoundPatterns = uni.getStorageSync('secondRoundPatterns') || [];
+                
+                if (secondRoundPatterns.length > 0) {
+                    // 强制使用第二轮图案
+                    uni.setStorageSync('selectionPool', [...secondRoundPatterns]);
+                    this.patterns = secondRoundPatterns;
+                    this.updateProgressDisplay();
+                    return;
+                }
+            }
+            
+            // 针对第三轮的特殊处理
+            if (progress.currentRoundGroup === 3) {
+                console.log("加载第三轮图案");
+                const thirdRoundPatterns = uni.getStorageSync('thirdRoundPatterns') || [];
+                
+                if (thirdRoundPatterns.length > 0) {
+                    // 强制使用第三轮图案
+                    uni.setStorageSync('selectionPool', [...thirdRoundPatterns]);
+                    this.patterns = thirdRoundPatterns;
+                    this.updateProgressDisplay();
+                    return;
+                }
+            }
+            
+            // 优先级提高：强制检查是否需要生成第四轮图案
+            if (progress.currentRoundGroup === 4 && 
+                (uni.getStorageSync('readyForRound4') || uni.getStorageSync('forceGenerateRound4'))) {
+                console.log("强制生成第四轮图案");
                 
                 try {
-                    // 清除标志
+                    // 清除所有标志
                     uni.removeStorageSync('readyForRound4');
+                    uni.removeStorageSync('forceGenerateRound4');
+                    
+                    // 彻底清空当前选择池
+                    uni.removeStorageSync('selectionPool');
                     
                     // 生成第四轮的6个全新图案
-                    const fourthRoundPatterns = generatePatterns().map(pattern => ({
+                    const fourthRoundPatterns = generatePatterns(4).map(pattern => ({
                         ...pattern,
                         isFirstAppearance: false,
                         roundGroup: 4 // 标记为第4大轮次
@@ -168,53 +246,60 @@ export default {
                     
                     // 保存第四轮图案并设置为当前选择池
                     uni.setStorageSync('fourthRoundPatterns', fourthRoundPatterns);
-                    uni.setStorageSync('selectionPool', [...fourthRoundPatterns]);
+                    uni.setStorageSync('selectionPool', fourthRoundPatterns);
                     
                     this.patterns = fourthRoundPatterns;
                     this.updateProgressDisplay();
+                    
+                    console.log(`成功生成第四轮图案，数量: ${fourthRoundPatterns.length}`);
                     return;
                 } catch (error) {
                     console.error("生成第四轮图案错误:", error);
                 }
             }
             
+            // 针对第四轮的特殊处理，确保一定能显示第四轮图案
+            if (progress.currentRoundGroup === 4) {
+                console.log("加载第四轮图案");
+                let fourthRoundPatterns = uni.getStorageSync('fourthRoundPatterns');
+                
+                // 如果第四轮图案不存在或为空，则重新生成
+                if (!fourthRoundPatterns || fourthRoundPatterns.length === 0) {
+                    console.log("第四轮图案不存在，重新生成");
+                    fourthRoundPatterns = generatePatterns(4).map(p => ({
+                        ...p,
+                        isFirstAppearance: false,
+                        roundGroup: 4
+                    }));
+                    uni.setStorageSync('fourthRoundPatterns', fourthRoundPatterns);
+                }
+                
+                // 强制使用第四轮图案
+                uni.setStorageSync('selectionPool', [...fourthRoundPatterns]);
+                this.patterns = fourthRoundPatterns;
+                console.log("第四轮图案数量:", this.patterns.length);
+                
+                // 输出日志便于调试
+                this.patterns.forEach((p, i) => {
+                    console.log(`第四轮图案 #${i+1}, 类型: ${p.type}, 轮次: ${p.roundGroup}`);
+                });
+                
+                this.updateProgressDisplay();
+                return;
+            }
+            
             // 获取并验证当前选择池
             let pool = getSelectionPool();
             
-            // 强制检查：确保选择池中只有当前轮次的图案
-            if (pool && pool.length > 0) {
-                const wrongRoundPatterns = pool.filter(p => p.roundGroup !== progress.currentRoundGroup);
-                if (wrongRoundPatterns.length > 0) {
-                    console.warn(`发现 ${wrongRoundPatterns.length} 个错误轮次的图案，将被过滤`);
-                    pool = pool.filter(p => p.roundGroup === progress.currentRoundGroup);
-                }
-            }
-            
-            // 仅当选择池为空时重建，不要因为数量少于6而重建（这样第二、三轮已完成的图案不会被恢复）
-            if (!pool || pool.length === 0) {
-                console.log(`选择池图案数量不足: ${pool?.length || 0}，尝试重建`);
-                
-                try {
-                    // 彻底重建当前轮次的选择池
-                    updateSelectionPoolForNewRound(progress.currentRoundGroup);
-                    pool = getSelectionPool();
-                    console.log(`重建后选择池图案数量: ${pool?.length || 0}`);
-                    
-                    // 再次检查数量，如果还是不足，说明该轮次确实训练了部分
-                    if (pool.length === 0) {
-                        console.error("警告：选择池为空，可能存在数据一致性问题");
-                    }
-                } catch (error) {
-                    console.error("重建选择池错误:", error);
-                }
+            // 如果选择池为空或不匹配当前轮次，重新获取
+            if (!pool || pool.length === 0 || pool.some(p => p.roundGroup !== progress.currentRoundGroup)) {
+                console.log(`选择池为空或不匹配当前轮次 ${progress.currentRoundGroup}，尝试重建`);
+                updateSelectionPoolForNewRound(progress.currentRoundGroup);
+                pool = getSelectionPool();
             }
             
             this.patterns = pool || [];
-            
-            // 确保显示的图案数量正确
             console.log(`当前选择池图案数量: ${this.patterns.length}`);
-            
-            // 显示当前进度
             this.updateProgressDisplay();
         },
 
@@ -249,7 +334,7 @@ export default {
 }
 
 .instruction-box {
-    background-color: #f0f8ff;
+    background-color: #f0fff4;
     border-radius: 10rpx;
     padding: 20rpx;
     margin-bottom: 20rpx;
@@ -281,6 +366,7 @@ export default {
 }
 
 .pattern-card {
+    position: relative; /* 为已完成标记提供定位上下文 */
     width: 48%;
     margin-bottom: 20rpx;
     background-color: #fff;
@@ -315,7 +401,7 @@ export default {
 }
 
 .selected {
-    background-color: #409EFF;
+    background-color: #22c55e;
     color: white;
 }
 
@@ -392,5 +478,36 @@ export default {
     color: #666;
     margin-top: 20rpx;
     text-align: center;
+}
+
+/* 添加已完成标记样式 */
+.completed-mark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12rpx;
+    z-index: 2;
+}
+
+.completed-icon {
+    font-size: 60rpx;
+    color: white;
+    margin-bottom: 10rpx;
+}
+
+.completed-text {
+    color: white;
+    background-color: #52c41a;
+    padding: 4rpx 16rpx;
+    border-radius: 20rpx;
+    font-size: 24rpx;
+    font-weight: bold;
 }
 </style>

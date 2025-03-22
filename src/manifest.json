@@ -51,9 +51,22 @@
   "mp-weixin": {
     "appid": "wx08e6a9e64f68a288",
     "setting": {
-      "urlCheck": false
+      "urlCheck": false,
+      "es6": true,
+      "postcss": true,
+      "minified": true,
+      "useStaticServer": true,
+      "staticServerOptions": {
+        "include": [
+          "static/audio/*.mp3",
+          "static/audio/*.m4a"
+        ]
+      },
+      "lazyCodeLoading": "requiredComponents"
     },
-    "usingComponents": true,
+    "usingComponents": {},
+    "packNpmManually": true,
+    "packNpmRelationList": [],
     "darkmode": true,
     "themeLocation": "theme.json"
   },

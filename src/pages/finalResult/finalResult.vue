@@ -1,5 +1,8 @@
 <template>
     <view class="container">
+        <!-- 添加BGM控制组件 -->
+        <BgmControl />
+        
         <view class="header">
             <view class="title">训练完成</view>
             <view class="subtitle">您已完成全部24次认知训练</view>
@@ -87,8 +90,12 @@ import {
     evaluateImprovement,
     initializeTraining
 } from '@/utils/patternUtils';
+import BgmControl from '@/components/BgmControl.vue'
 
 export default {
+    components: {
+        BgmControl
+    },
     data() {
         return {
             userInfo: null,

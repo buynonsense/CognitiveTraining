@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "训练进行中",
+  "usingComponents": {
+    "wd-button": "wot-design-uni/components/wd-button/wd-button"
+  }
+}
